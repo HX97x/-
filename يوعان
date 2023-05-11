@@ -1,0 +1,58 @@
+import os
+import sys
+
+from flask import Flask, render_template, request
+from flask_sqlalchemy import SQLAlchemy
+
+app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL']
+db = SQLAlchemy(app)
+
+class Food(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100))
+    price = db.Column(db.Float)
+    description = db.Column(db.String(500))
+
+@app.route("/")
+def index():
+    foods = Food.query.all()
+    return render_template("index.html", foods=foods)
+
+@app.route("/add", methods=["GET", "POST"])
+def add():
+    if request.method == "GET":
+        return render_template("add.html")
+    else:
+        name = request.form["name"]
+        price = request.form["price"]
+        description = request.form["description"]
+        new_food = Food(name=name, price=price, description=description)
+        db.session.add(new_food)
+        db.session.commit()
+        return redirect("/")
+
+@app.route("/edit/<int:id>", methods=["GET", "POST"])
+def edit(id):
+    food = Food.query.get(id)
+    if request.method == "GET":
+        return render_template("edit.html", food=food)
+    else:
+        name = request.form["name"]
+        price = request.form["price"]
+        description = request.form["description"]
+        food.name = name
+        food.price = price
+        food.description = description
+        db.session.commit()
+        return redirect("/")
+
+@app.route("/delete/<int:id>")
+def delete(id):
+    food = Food.query.get(id)
+    db.session.delete(food)
+    db.session.commit()
+    return redirect("/")
+
+if __name__ == "__main__":
+    app.run(debug=True)
